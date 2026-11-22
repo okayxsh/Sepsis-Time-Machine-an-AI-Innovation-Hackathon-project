@@ -1,0 +1,55 @@
+{
+  "data": {
+    "rows": 58327,
+    "patients": 1500,
+    "train_patients": 1020,
+    "val_patients": 180,
+    "test_patients": 300,
+    "test_rows": 11119,
+    "septic_test_patients": 21,
+    "pct_septic_patients": 0.09533333333333334,
+    "pct_positive_rows": 0.02343683028443088
+  },
+  "model": {
+    "type": "LightGBM",
+    "n_features": 75,
+    "best_iteration": 31,
+    "val_auroc": 0.8044233209132988
+  },
+  "test": {
+    "auroc": 0.830576574901577,
+    "auprc": 0.084954287141014,
+    "prevalence_rows": 0.018257037503372604
+  },
+  "sirs": {
+    "auroc": 0.6375733997368169,
+    "auprc": 0.02888034449581115,
+    "threshold": 0.5,
+    "sensitivity": 0.8095238095238095,
+    "median_lead_h": 39.0,
+    "false_alerts_per_100_pd": 177.592867756315,
+    "nonseptic_pct_alerted": 0.8064516129032258,
+    "n_septic": 21,
+    "n_caught": 17
+  },
+  "default_threshold": 0.12,
+  "threshold_rule": "patient-level Youden (sensitivity - % non-septic patients alerted) on validation patients",
+  "at_default": {
+    "threshold": 0.12,
+    "sensitivity": 0.8095238095238095,
+    "median_lead_h": 24.0,
+    "false_alerts_per_100_pd": 43.98216939078752,
+    "nonseptic_pct_alerted": 0.3548387096774194,
+    "n_septic": 21,
+    "n_caught": 17
+  },
+  "ours_at_sirs_sensitivity": {
+    "threshold": 0.12,
+    "sensitivity": 0.8095238095238095,
+    "median_lead_h": 24.0,
+    "false_alerts_per_100_pd": 43.98216939078752,
+    "nonseptic_pct_alerted": 0.3548387096774194,
+    "n_septic": 21.0,
+    "n_caught": 17.0
+  }
+}

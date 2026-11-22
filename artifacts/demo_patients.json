@@ -1,0 +1,37 @@
+{
+  "threshold": 0.12,
+  "patients": [
+    {
+      "Patient_ID": "p000185",
+      "kind": "caught",
+      "label": "\u2605 Demo 1: caught early",
+      "first_alert_hour": 56,
+      "onset_hour": 61,
+      "lead_h": 5
+    },
+    {
+      "Patient_ID": "p000483",
+      "kind": "caught",
+      "label": "\u2605 Demo 2: caught early",
+      "first_alert_hour": 18,
+      "onset_hour": 25,
+      "lead_h": 7
+    },
+    {
+      "Patient_ID": "p001086",
+      "kind": "missed",
+      "label": "Missed case",
+      "first_alert_hour": 41,
+      "onset_hour": 40,
+      "lead_h": null
+    },
+    {
+      "Patient_ID": "p000853",
+      "kind": "nonseptic",
+      "label": "No sepsis",
+      "first_alert_hour": null,
+      "onset_hour": null,
+      "lead_h": null
+    }
+  ]
+}

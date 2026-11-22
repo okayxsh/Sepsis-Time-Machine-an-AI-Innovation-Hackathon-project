@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sepsis Time Machine</title>
+<meta name="description" content="Explainable early warning for ICU sepsis: predicts risk hourly, explains why, and helps clinicians act within the golden hour." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;600&family=Mona+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#04070d; --bg2:#070d18; --panel:#091120; --line:#101c2f; --ink:#e8eef7; --muted:#8fa3bd;
+  --teal:#3fd0c9; --amber:#f5b042; --blue:#6fb6ff; --red:#f0626a; --green:#4ade80;
+  --serif:"Instrument Serif",Georgia,serif; --sans:"Mona Sans",system-ui,-apple-system,Segoe UI,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;scroll-snap-type:y proximity}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit;text-decoration:none}
+.wrap{max-width:1160px;margin:0 auto;padding:0 28px}
+section{scroll-snap-align:start;padding:110px 0 90px;position:relative}
+.eyebrow{font-family:var(--mono);font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--teal)}
+h1,h2{font-family:var(--serif);font-weight:400;letter-spacing:-.01em;line-height:1.02}
+h1{font-size:clamp(3rem,7vw,5.6rem)}
+h2{font-size:clamp(2.2rem,4.6vw,3.6rem);margin:14px 0 18px}
+h1 em,h2 em{color:var(--teal);font-style:italic}
+.lead{font-size:1.2rem;color:var(--muted);max-width:620px}
+.btn{display:inline-flex;align-items:center;gap:10px;padding:14px 22px;border-radius:999px;font-weight:600;font-size:1rem;transition:.2s}
+.btn.primary{background:var(--teal);color:#04070d}
+.btn.primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.btn.ghost{border:1px solid var(--line);color:var(--ink)}
+.btn.ghost:hover{border-color:var(--teal)}
+/* nav */
+nav{position:fixed;inset:0 0 auto 0;z-index:50;background:rgba(4,7,13,.72);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;letter-spacing:-.01em}
+.logo .dot{width:10px;height:10px;border-radius:50%;background:var(--red);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.navlinks{display:flex;gap:26px;font-size:.92rem;color:var(--muted)}
+.navlinks a:hover{color:var(--ink)}
+nav .btn{padding:9px 16px;font-size:.9rem}
+/* hero */
+#hero{min-height:100vh;display:flex;align-items:center;padding-top:120px;
+  background:radial-gradient(900px 500px at 85% 30%,rgba(63,208,201,.10),transparent 60%),radial-gradient(700px 400px at 10% 90%,rgba(240,98,106,.08),transparent 60%)}
+.hero-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center}
+.hero-cta{display:flex;gap:14px;margin-top:34px;flex-wrap:wrap}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px}
+.chip{font-family:var(--mono);font-size:.74rem;padding:6px 11px;border:1px solid var(--line);border-radius:999px;color:var(--muted)}
+.monitor{background:linear-gradient(180deg,var(--panel),var(--bg2));border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:0 30px 80px rgba(0,0,0,.5)}
+.mon-head{display:flex;justify-content:space-between;font-family:var(--mono);font-size:.75rem;color:var(--muted);margin-bottom:10px}
+.mon-head b{color:var(--ink)}
+.alert-pill{display:inline-block;background:rgba(240,98,106,.15);color:var(--red);border:1px solid var(--red);padding:6px 12px;border-radius:8px;font-family:var(--mono);font-size:.8rem;font-weight:600;opacity:0;animation:fadein .5s 2.3s forwards}
+.caught-pill{display:inline-block;background:rgba(74,222,128,.12);color:var(--green);border:1px solid var(--green);padding:6px 12px;border-radius:8px;font-family:var(--mono);font-size:.8rem;font-weight:600;opacity:0;animation:fadein .5s 3.4s forwards;margin-left:6px}
+@keyframes fadein{to{opacity:1}}
+svg .risk{stroke-dasharray:900;stroke-dashoffset:900;animation:draw 3.2s ease-out .2s forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+svg .late{opacity:0;animation:fadein .4s forwards}
+.reasons{margin-top:12px;display:grid;gap:7px}
+.reason{font-size:.88rem;background:#0b1526;border-left:3px solid var(--red);padding:8px 12px;border-radius:6px;opacity:0;animation:fadein .5s forwards}
+.reason span{float:right;font-family:var(--mono);color:var(--muted)}
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:40px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px}
+.stat .n{font-family:var(--serif);font-size:3.4rem;line-height:1;color:var(--ink)}
+.stat .n.red{color:var(--red)} .stat .n.amber{color:var(--amber)} .stat .n.teal{color:var(--teal)}
+.stat p{color:var(--muted);margin-top:10px;font-size:.95rem}
+.src{font-family:var(--mono);font-size:.8rem;color:#8296b0;margin-top:18px}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px;position:relative;overflow:hidden}
+.step .k{font-family:var(--mono);font-size:.75rem;color:var(--teal)}
+.step h3{font-family:var(--serif);font-weight:400;font-size:2rem;margin:10px 0 8px}
+.step p{color:var(--muted)}
+.step .tag{display:inline-block;margin-top:16px;font-family:var(--mono);font-size:.72rem;color:var(--amber);border:1px solid rgba(245,176,66,.35);padding:4px 9px;border-radius:6px}
+/* timeline */
+.timeline{margin-top:46px;position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.timeline:before{content:"";position:absolute;left:0;right:0;top:22px;height:2px;background:linear-gradient(90deg,var(--blue),var(--amber),var(--red),var(--muted))}
+.tp{position:relative;padding-top:46px}
+.tp:before{content:"";position:absolute;top:13px;left:0;width:20px;height:20px;border-radius:50%;background:var(--bg);border:3px solid var(--c,var(--blue))}
+.tp .h{font-family:var(--mono);font-size:.8rem;color:var(--c,var(--blue))}
+.tp h4{font-size:1.15rem;margin:6px 0}
+.tp p{color:var(--muted);font-size:.95rem}
+/* results */
+.res-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:28px;margin-top:36px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px}
+.bar-row{margin:18px 0}
+.bar-row .lbl{display:flex;justify-content:space-between;font-size:.95rem;margin-bottom:8px}
+.bar-row .lbl b{font-family:var(--mono)}
+.bar{height:14px;background:#0d1a2d;border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;width:0;transition:width 1.4s ease}
+.big2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.mini{background:#0b1526;border:1px solid var(--line);border-radius:12px;padding:18px}
+.mini .n{font-family:var(--serif);font-size:2.6rem;line-height:1}
+.mini p{color:var(--muted);font-size:.88rem;margin-top:6px}
+.note{margin-top:18px;font-size:.85rem;color:var(--muted);border-left:3px solid var(--amber);padding-left:12px}
+/* trust */
+.trust{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:36px}
+.trust div{border:1px solid var(--line);border-radius:14px;padding:22px;background:linear-gradient(180deg,var(--panel),transparent)}
+.trust h4{font-size:1.05rem;margin-bottom:6px}
+.trust h4:before{content:"✓ ";color:var(--teal)}
+.trust p{color:var(--muted);font-size:.93rem}
+/* cta */
+#demo{text-align:center;background:radial-gradient(700px 360px at 50% 40%,rgba(63,208,201,.12),transparent 70%)}
+#demo .lead{margin:0 auto}
+.disclaimer{font-family:var(--mono);font-size:.82rem;color:#8296b0;margin-top:40px}
+footer{border-top:1px solid var(--line);padding:26px 0;color:#8296b0;font-size:.85rem}
+footer .wrap{display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.kbd{position:fixed;right:18px;bottom:16px;font-family:var(--mono);font-size:.8rem;color:#8296b0;background:rgba(9,17,32,.8);border:1px solid var(--line);padding:6px 10px;border-radius:8px;z-index:40}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+.reveal.on{opacity:1;transform:none}
+@media (max-width:900px){
+  .hero-grid,.res-grid{grid-template-columns:1fr}
+  .stats{grid-template-columns:1fr 1fr}
+  .steps,.trust{grid-template-columns:1fr}
+  .timeline{grid-template-columns:1fr 1fr}
+  .navlinks{display:none}
+  .wrap{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a href="#hero" class="logo"><span class="dot"></span>Sepsis Time Machine</a>
+    <div class="navlinks">
+      <a href="#problem">Problem</a><a href="#idea">Idea</a><a href="#replay">Time Machine</a>
+      <a href="#results">Results</a><a href="#trust">Trust</a>
+    </div>
+    <a class="btn primary" href="http://localhost:8501" target="_blank">Live dashboard →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Medical AI · Explainable early warning</div>
+      <h1 style="margin-top:18px">See sepsis coming <em>hours</em> before it arrives.</h1>
+      <p class="lead" style="margin-top:22px">An AI co-pilot for the ICU that reads every patient's vital signs and lab results each hour, warns about sepsis early, explains <em>why</em> in plain English, and walks the team through the first hour of treatment.</p>
+      <div class="hero-cta">
+        <a class="btn primary" href="http://localhost:8501" target="_blank">▶ Open the Time Machine</a>
+        <a class="btn ghost" href="#problem">Why it matters ↓</a>
+      </div>
+      <div class="chips">
+        <span class="chip">Real ICU data · PhysioNet 2019</span><span class="chip">LightGBM</span>
+        <span class="chip">SHAP explanations</span><span class="chip">LLM SBAR handoff</span>
+      </div>
+    </div>
+
+    <div class="monitor">
+      <div class="mon-head"><span>BED 07 · <b>Unseen test patient</b></span><span>SEPSIS RISK / ICU HOUR</span></div>
+      <svg viewBox="0 0 520 230" width="100%" role="img" aria-label="Risk rising over ICU hours, crossing the alert threshold before clinical onset">
+        <defs>
+          <linearGradient id="rg" x1="0" x2="1"><stop offset="0" stop-color="#6fb6ff"/><stop offset=".55" stop-color="#f5b042"/><stop offset="1" stop-color="#f0626a"/></linearGradient>
+          <linearGradient id="fill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#f0626a" stop-opacity=".22"/><stop offset="1" stop-color="#f0626a" stop-opacity="0"/></linearGradient>
+        </defs>
+        <g stroke="#101c2f"><line x1="30" y1="40" x2="510" y2="40"/><line x1="30" y1="100" x2="510" y2="100"/><line x1="30" y1="160" x2="510" y2="160"/><line x1="30" y1="200" x2="510" y2="200"/></g>
+        <line x1="30" y1="110" x2="510" y2="110" stroke="#f0626a" stroke-dasharray="6 6" stroke-width="1.5"/>
+        <text x="34" y="104" fill="#f0626a" font-family="JetBrains Mono,monospace" font-size="12">alert threshold</text>
+        <path class="risk" d="M30,190 C70,188 95,186 120,183 S170,180 200,176 S240,168 262,150 S290,120 305,108 S340,80 370,66 S420,52 450,46 S490,40 510,38" fill="none" stroke="url(#rg)" stroke-width="4" stroke-linecap="round"/>
+        <g class="late" style="animation-delay:2.2s">
+          <line x1="308" y1="30" x2="308" y2="200" stroke="#f0626a" stroke-width="2"/>
+          <text x="314" y="30" fill="#f0626a" font-family="JetBrains Mono,monospace" font-size="12">⚠ ALERT · h18</text>
+        </g>
+        <g class="late" style="animation-delay:3.2s">
+          <line x1="440" y1="30" x2="440" y2="200" stroke="#9ca3af" stroke-width="2" stroke-dasharray="5 5"/>
+          <text x="446" y="216" fill="#9ca3af" font-family="JetBrains Mono,monospace" font-size="12">onset · h25</text>
+        </g>
+        <text x="30" y="222" fill="#8296b0" font-family="JetBrains Mono,monospace" font-size="12">h0</text>
+        <text x="490" y="222" fill="#8296b0" font-family="JetBrains Mono,monospace" font-size="12">h30</text>
+      </svg>
+      <div style="margin-top:6px"><span class="alert-pill">⚠ SEPSIS RISK – HOUR 18</span><span class="caught-pill">✓ CAUGHT 7 H EARLY</span></div>
+      <div class="reasons">
+        <div class="reason" style="animation-delay:2.6s">Creatinine 2.8 mg/dL – kidneys under strain <span>SHAP +0.67</span></div>
+        <div class="reason" style="animation-delay:2.8s">Lactate just measured: 3.0 mmol/L <span>+0.27</span></div>
+        <div class="reason" style="animation-delay:3.0s">Blood pH 7.28 – acidotic <span>+0.24</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="wrap">
+    <div class="eyebrow reveal">01 · The problem</div>
+    <h2 class="reveal">Sepsis is a race against the clock <em>and we keep starting late.</em></h2>
+    <p class="lead reveal">Sepsis happens when the body's response to an infection starts damaging its own organs. Caught early, it is treatable. Caught late, it kills.</p>
+    <div class="stats">
+      <div class="stat reveal"><div class="n red">~11M</div><p>deaths a year worldwide from sepsis</p></div>
+      <div class="stat reveal"><div class="n amber">1 in 5</div><p>of all deaths globally are linked to sepsis</p></div>
+      <div class="stat reveal"><div class="n">Every hour</div><p>of delay in treatment raises the risk of death</p></div>
+      <div class="stat reveal"><div class="n teal">“Why?”</div><p>Existing rule-based alarms miss many cases, fire constantly, and never explain themselves</p></div>
+    </div>
+    <div class="src">Sources: Rudd et al., Lancet 2020 (Global Burden of Disease); Surviving Sepsis Campaign guidelines.</div>
+  </div>
+</section>
+
+<!-- IDEA -->
+<section id="idea">
+  <div class="wrap">
+    <div class="eyebrow reveal">02 · The idea</div>
+    <h2 class="reveal">Predict. Explain. <em>Act.</em></h2>
+    <p class="lead reveal">Three steps that turn hourly ICU data into a decision a clinician can trust.</p>
+    <div class="steps">
+      <div class="step reveal"><div class="k">STEP 1 · PREDICT</div><h3>Risk every hour</h3>
+        <p>A gradient-boosted model reads 75 features built only from past and current data (vital-sign trends, shock index, lab results) and scores sepsis risk hours before clinical onset.</p>
+        <span class="tag">LightGBM · real ICU data</span></div>
+      <div class="step reveal"><div class="k">STEP 2 · EXPLAIN</div><h3>The top three reasons</h3>
+        <p>Every alert shows the top three reasons in plain English with real values, e.g. “Shock index 1.15 (was 0.80 six hours ago)”. No black box.</p>
+        <span class="tag">SHAP TreeExplainer</span></div>
+      <div class="step reveal"><div class="k">STEP 3 · ACT</div><h3>The golden hour</h3>
+        <p>One click writes an SBAR page to the on-call doctor. The Hour-1 Bundle checklist starts a countdown and suggests fluids or vasopressors based on the patient's values.</p>
+        <span class="tag">LLM + offline fallback</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- REPLAY -->
+<section id="replay">
+  <div class="wrap">
+    <div class="eyebrow reveal">03 · The Time Machine</div>
+    <h2 class="reveal">Replay a real ICU stay, <em>hour by hour.</em></h2>
+    <p class="lead reveal">We take a patient the model has never seen and scrub through their stay. You see only what the clinician would have seen at that moment, with nothing from the future.</p>
+    <div class="timeline">
+      <div class="tp reveal" style="--c:var(--blue)"><div class="h">HOUR 0–12</div><h4>Looks stable</h4><p>Vital signs within normal range. Risk is low. No alarm.</p></div>
+      <div class="tp reveal" style="--c:var(--amber)"><div class="h">HOUR 13–17</div><h4>Quiet drift</h4><p>Breathing rate creeps up, kidney function worsens. Risk climbs before any human rule notices.</p></div>
+      <div class="tp reveal" style="--c:var(--red)"><div class="h">HOUR 18</div><h4>⚠ Alert + reasons</h4><p>Red banner, top three reasons, SBAR page to the doctor, Hour-1 bundle countdown starts.</p></div>
+      <div class="tp reveal" style="--c:#9ca3af"><div class="h">HOUR 25</div><h4>Clinical onset</h4><p>Sepsis is confirmed by the Sepsis-3 definition. The model warned <b style="color:var(--green)">7 hours earlier</b>.</p></div>
+    </div>
+    <div class="hero-cta reveal" style="margin-top:44px"><a class="btn primary" href="http://localhost:8501" target="_blank">▶ Watch it live</a></div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+  <div class="wrap">
+    <div class="eyebrow reveal">04 · Results on unseen patients</div>
+    <h2 class="reveal">Beats the bedside rule <em>and cuts alarm fatigue.</em></h2>
+    <div class="res-grid">
+      <div class="card reveal">
+        <div style="font-weight:600">Discrimination (AUROC, hourly predictions)</div>
+        <div class="bar-row"><div class="lbl"><span>Sepsis Time Machine</span><b style="color:var(--teal)">0.83</b></div><div class="bar"><i data-w="83" style="background:var(--teal)"></i></div></div>
+        <div class="bar-row"><div class="lbl"><span>SIRS rule (standard bedside screen)</span><b style="color:var(--red)">0.64</b></div><div class="bar"><i data-w="64" style="background:var(--red)"></i></div></div>
+        <div style="font-weight:600;margin-top:28px">False alerts per 100 patient-days at the same sensitivity (81 %)</div>
+        <div class="bar-row"><div class="lbl"><span>Sepsis Time Machine</span><b style="color:var(--teal)">44</b></div><div class="bar"><i data-w="24.7" style="background:var(--teal)"></i></div></div>
+        <div class="bar-row"><div class="lbl"><span>SIRS rule</span><b style="color:var(--red)">178</b></div><div class="bar"><i data-w="100" style="background:var(--red)"></i></div></div>
+      </div>
+      <div>
+        <div class="big2">
+          <div class="mini reveal"><div class="n" style="color:var(--teal)">4×</div><p>fewer false alarms than SIRS for the same catch rate</p></div>
+          <div class="mini reveal"><div class="n" style="color:var(--green)">7 h</div><p>earlier than clinical onset in our headline replay</p></div>
+          <div class="mini reveal"><div class="n">35 %</div><p>of non-septic patients ever alerted, vs 81 % with SIRS</p></div>
+          <div class="mini reveal"><div class="n" style="color:var(--amber)">0</div><p>patients shared between training and test (split by patient)</p></div>
+        </div>
+        <p class="note reveal">Prototype numbers from a 1,500-patient subset of PhysioNet/CinC 2019 (300 held-out test patients, 21 septic). The full 40,000-patient training run is in progress. Small sample, so treat these as early results.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TRUST -->
+<section id="trust">
+  <div class="wrap">
+    <div class="eyebrow reveal">05 · Built to be trusted</div>
+    <h2 class="reveal">Honest by design.</h2>
+    <div class="trust">
+      <div class="reveal"><h4>No data leakage</h4><p>The train/test split is by patient. Every feature uses only past and current hours. The label is never an input.</p></div>
+      <div class="reveal"><h4>The AI doesn't invent anything</h4><p>The LLM only rephrases values we computed. If the API is down, a deterministic template takes over, so it runs fully offline.</p></div>
+      <div class="reveal"><h4>We show our misses</h4><p>The dashboard includes a case the model missed. The threshold slider shows the trade-off between catches and false alarms.</p></div>
+      <div class="reveal"><h4>Standards-based actions</h4><p>The Hour-1 bundle follows the Surviving Sepsis Campaign: lactate, cultures, antibiotics, 30 mL/kg fluids, vasopressors.</p></div>
+      <div class="reveal"><h4>Known limitations</h4><p>Retrospective data from two US hospitals. Not prospectively validated and not yet tested on UAE populations.</p></div>
+      <div class="reveal"><h4>Clinician in the loop</h4><p>Decision support, not diagnosis. The doctor makes the final call, with better information and sooner.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="demo">
+  <div class="wrap">
+    <div class="eyebrow reveal">Live demo</div>
+    <h2 class="reveal">Hours earlier. <em>And it tells you why.</em></h2>
+    <p class="lead reveal">Step into the Time Machine: a real patient replay, the alert, the reasons, the page to the doctor and the first-hour checklist.</p>
+    <div class="hero-cta reveal" style="justify-content:center"><a class="btn primary" href="http://localhost:8501" target="_blank">▶ Open the live dashboard</a></div>
+    <div class="disclaimer">Decision-support prototype · clinicians make the final decision · not for clinical use</div>
+  </div>
+</section>
+
+<footer><div class="wrap"><span>Sepsis Time Machine · UOWD Medical AI Hackathon</span><span>Data: PhysioNet / Computing in Cardiology Challenge 2019</span></div></footer>
+<div class="kbd">← → or Space to step through sections</div>
+
+<script>
+// reveal on scroll + animate bars
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) {
+    e.target.classList.add('on');
+    e.target.querySelectorAll('.bar i').forEach(b => b.style.width = b.dataset.w + '%');
+  }
+}), {threshold: .15});
+document.querySelectorAll('.reveal, .card').forEach(el => io.observe(el));
+// presenter keys: step section by section
+const secs = [...document.querySelectorAll('section')];
+function current(){ let i=0; secs.forEach((s,k)=>{ if (s.getBoundingClientRect().top < innerHeight*0.4) i=k; }); return i; }
+addEventListener('keydown', e => {
+  if (['ArrowRight','ArrowDown','PageDown',' '].includes(e.key)) { e.preventDefault(); secs[Math.min(secs.length-1, current()+1)].scrollIntoView(); }
+  if (['ArrowLeft','ArrowUp','PageUp'].includes(e.key)) { e.preventDefault(); secs[Math.max(0, current()-1)].scrollIntoView(); }
+  if (e.key === 'd') window.open('http://localhost:8501', '_blank');
+});
+</script>
+</body>
+</html>
